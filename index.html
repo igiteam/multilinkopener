@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Link Auto Opener</title>
+    <script>
+        // Check if running in NW.js
+        const isNW = typeof nw !== 'undefined' && nw && nw.Window;
+
+        // Get all URL parameters
+        const params = new URLSearchParams(window.location.search);
+        
+        // Collect all URLs from parameters (url, url1, url2, etc.)
+        const urls = [];
+        
+        // Check for 'url' parameter
+        if (params.has('url')) {
+            urls.push(params.get('url'));
+        }
+        
+        // Check for 'url1', 'url2', 'url3', etc.
+        let i = 1;
+        while (params.has('url' + i)) {
+            urls.push(params.get('url' + i));
+            i++;
+        }
+        
+        // Also check for 'urls' parameter (comma separated)
+        if (params.has('urls')) {
+            const splitUrls = params.get('urls').split(',').map(u => u.trim());
+            urls.push(...splitUrls);
+        }
+
+        // If no URLs found, check for any parameter that looks like a URL
+        if (urls.length === 0) {
+            params.forEach((value, key) => {
+                if (value && (value.startsWith('http://') || value.startsWith('https://'))) {
+                    urls.push(value);
+                }
+            });
+        }
+
+        // Open all URLs
+        if (urls.length > 0 && isNW) {
+            urls.forEach((url, index) => {
+                // Small delay between openings
+                setTimeout(() => {
+                    try {
+                        nw.Window.open(url, {
+                            focus: true,
+                            new_instance: true
+                        });
+                        console.log('Opened:', url);
+                    } catch (e) {
+                        console.error('Failed to open:', url, e);
+                    }
+                }, index * 200);
+            });
+            
+            // Close this window after opening all URLs
+            setTimeout(() => {
+                nw.Window.get().close();
+            }, urls.length * 200 + 500);
+        } else if (urls.length > 0 && !isNW) {
+            // Fallback for browser testing
+            urls.forEach((url, index) => {
+                setTimeout(() => {
+                    window.open(url, '_blank');
+                }, index * 200);
+            });
+        }
+
+        // Show debug info in body
+        document.write(`
+            <div style="font-family: monospace; padding: 20px;">
+                <h2>Multi-Link Auto Opener</h2>
+                ${urls.length > 0 ? 
+                    `<p>Opening ${urls.length} URL${urls.length > 1 ? 's' : ''}...</p>
+                     <ul>${urls.map(u => `<li>${u}</li>`).join('')}</ul>` : 
+                    `<p style="color: red;">No URLs found in parameters!</p>
+                     <p>Usage: ?url=https://example.com&url2=https://google.com</p>`
+                }
+                <p style="color: gray; font-size: 12px;">${isNW ? 'Running in NW.js' : 'Running in browser (fallback mode)'}</p>
+            </div>
+        `);
+    </script>
+</head>
+
+<body>
+</body>
+
+</html>
